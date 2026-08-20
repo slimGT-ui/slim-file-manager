@@ -29,7 +29,6 @@ from PySide6.QtGui import (
 )
 
 
-# --- Поток для асинхронного копирования/перемещения ---
 class FileOpThread(QThread):
     progress = Signal(int, str)
     finished = Signal()
@@ -158,7 +157,7 @@ class TextEditor(QMainWindow):
         toolbar.setMovable(False)
         self.addToolBar(toolbar)
 
-        save_action = QAction("💾 Save", self)
+        save_action = QAction("Save", self)
         save_action.triggered.connect(self.save_file)
         toolbar.addAction(save_action)
 
@@ -218,7 +217,8 @@ class ZipViewer(QMainWindow):
             with zipfile.ZipFile(self.file_path, 'r') as zf:
                 for info in zf.infolist():
                     size_kb = round(info.file_size / 1024, 1)
-                    item_text = f"{'📁' if info.is_dir() else '📄'}  {info.filename}  ({size_kb} KB)"
+                    item_type = "[DIR]" if info.is_dir() else "[FILE]"
+                    item_text = f"{item_type}  {info.filename}  ({size_kb} KB)"
                     self.list_widget.addItem(item_text)
         except Exception as error:
             QMessageBox.critical(self, "Ошибка", f"Не удалось прочитать архив:\n\n{error}")
@@ -298,10 +298,10 @@ class FileListWidget(QListWidget):
             return
 
         menu = QMenu(self)
-        move_action = menu.addAction("🚚 Переместить сюда")
-        copy_action = menu.addAction("📋 Копировать сюда")
+        move_action = menu.addAction("Переместить сюда")
+        copy_action = menu.addAction("Копировать сюда")
         menu.addSeparator()
-        cancel_action = menu.addAction("❌ Отмена")
+        cancel_action = menu.addAction("Отмена")
 
         chosen_action = menu.exec(self.mapToGlobal(event.position().toPoint()))
 
@@ -336,7 +336,7 @@ class SidebarWidget(QWidget):
                 path = u.toLocalFile()
                 if os.path.isdir(path):
                     folder_name = os.path.basename(path) or path
-                    self.main_window.add_sidebar_button(f"📌   {folder_name}", path, is_custom=True)
+                    self.main_window.add_sidebar_button(f"  {folder_name}", path, is_custom=True)
             event.acceptProposedAction()
 
 
@@ -383,7 +383,6 @@ class FileManager(QMainWindow):
         main_layout.setContentsMargins(0, 0, 0, 0)
         main_layout.setSpacing(0)
 
-        # Боковая панель
         self.sidebar = SidebarWidget(self)
         self.sidebar.setFixedWidth(220)
         self.sidebar_layout = QVBoxLayout(self.sidebar)
@@ -398,11 +397,11 @@ class FileManager(QMainWindow):
         self.sidebar_layout.addLayout(self.sidebar_buttons_layout)
 
         default_buttons = [
-            ("🏠   Home", "~"),
-            ("🖥   Desktop", "~/Desktop"),
-            ("⬇   Downloads", "~/Downloads"),
-            ("📄   Documents", "~/Documents"),
-            ("🖼   Pictures", "~/Pictures"),
+            ("Home", "~"),
+            ("Desktop", "~/Desktop"),
+            ("Downloads", "~/Downloads"),
+            ("Documents", "~/Documents"),
+            ("Pictures", "~/Pictures"),
         ]
 
         for text, path in default_buttons:
@@ -411,7 +410,7 @@ class FileManager(QMainWindow):
         for path in self.custom_pins:
             if os.path.exists(path):
                 folder_name = os.path.basename(path) or path
-                self.add_sidebar_button(f"📌   {folder_name}", path, is_custom=True, save=False)
+                self.add_sidebar_button(f"Pin: {folder_name}", path, is_custom=True, save=False)
 
         self.sidebar_layout.addStretch()
         version = QLabel("Slim File Manager v1.2")
@@ -420,7 +419,6 @@ class FileManager(QMainWindow):
 
         main_layout.addWidget(self.sidebar)
 
-        # Главная область
         content = QWidget()
         content_layout = QVBoxLayout(content)
         content_layout.setContentsMargins(20, 20, 20, 20)
@@ -434,25 +432,24 @@ class FileManager(QMainWindow):
         self.back_button.clicked.connect(self.go_back)
         self.forward_button.clicked.connect(self.go_forward)
 
-        # Контейнер для кликабельного пути (Breadcrumbs)
         self.breadcrumb_container = QWidget()
         self.breadcrumb_layout = QHBoxLayout(self.breadcrumb_container)
         self.breadcrumb_layout.setContentsMargins(0, 0, 0, 0)
         self.breadcrumb_layout.setSpacing(4)
         self.breadcrumb_layout.setAlignment(Qt.AlignLeft)
 
-        self.view_toggle_button = QPushButton("📄 Вид")
+        self.view_toggle_button = QPushButton("Вид")
         self.view_toggle_button.setToolTip("Переключить сетка/список")
         self.view_toggle_button.clicked.connect(self.toggle_view_mode)
 
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("🔍 Поиск...")
+        self.search_input.setPlaceholderText("Поиск...")
         self.search_input.setFixedWidth(150)
         self.search_input.textChanged.connect(self.filter_files)
 
-        self.hidden_button = QPushButton("👁")
+        self.hidden_button = QPushButton("Скрытые")
         self.hidden_button.setToolTip("Показать/скрыть скрытые файлы")
-        self.hidden_button.setFixedWidth(45)
+        self.hidden_button.setFixedWidth(80)
         self.hidden_button.clicked.connect(self.toggle_hidden)
 
         top_bar.addWidget(self.back_button)
@@ -540,7 +537,7 @@ class FileManager(QMainWindow):
 
     def remove_sidebar_button(self, button, path, pos):
         menu = QMenu(self)
-        remove_action = menu.addAction("❌ Удалить из быстрого доступа")
+        remove_action = menu.addAction("Удалить из быстрого доступа")
         if menu.exec(button.mapToGlobal(pos)) == remove_action:
             if path in self.custom_pins:
                 self.custom_pins.remove(path)
@@ -611,7 +608,6 @@ class FileManager(QMainWindow):
             files.sort(key=lambda name: (not os.path.isdir(os.path.join(self.current_path, name)), name.lower()))
 
             img_exts = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp")
-            txt_exts = (".txt", ".md", ".json", ".csv", ".py", ".html", ".css", ".js")
 
             images_to_load = []
 
@@ -623,23 +619,14 @@ class FileManager(QMainWindow):
                 item.setData(Qt.UserRole, full_path)
 
                 if os.path.isdir(full_path):
-                    prefix = "📁  " if self.is_list_view else "📁\n"
+                    prefix = "[DIR] " if self.is_list_view else "[DIR]\n"
                     item.setText(f"{prefix}{filename}")
                 elif ext in img_exts:
-                    prefix = "🖼️  " if self.is_list_view else "🖼️\n"
+                    prefix = "[IMG] " if self.is_list_view else "[IMG]\n"
                     item.setText(f"{prefix}{filename}")
                     images_to_load.append(full_path)
-                elif ext == ".zip":
-                    prefix = "📦  " if self.is_list_view else "📦\n"
-                    item.setText(f"{prefix}{filename}")
-                elif ext == ".py":
-                    prefix = "🐍  " if self.is_list_view else "🐍\n"
-                    item.setText(f"{prefix}{filename}")
-                elif ext in txt_exts:
-                    prefix = "📄  " if self.is_list_view else "📄\n"
-                    item.setText(f"{prefix}{filename}")
                 else:
-                    prefix = "📄  " if self.is_list_view else "📄\n"
+                    prefix = "[FILE] " if self.is_list_view else "[FILE]\n"
                     item.setText(f"{prefix}{filename}")
 
                 self.file_list.addItem(item)
@@ -665,7 +652,7 @@ class FileManager(QMainWindow):
         selected_items = self.file_list.selectedItems()
 
         if selected_items:
-            compress_action = menu.addAction("📦 Сжать в ZIP-архив")
+            compress_action = menu.addAction("Сжать в ZIP-архив")
             
             rename_action = None
             run_action = None
@@ -679,25 +666,25 @@ class FileManager(QMainWindow):
                 ext = os.path.splitext(path)[1].lower()
                 img_exts = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp")
 
-                rename_action = menu.addAction("✏️ Переименовать (F2)")
+                rename_action = menu.addAction("Переименовать (F2)")
 
                 if ext in img_exts:
-                    copy_img_action = menu.addAction("🖼️ Копировать картинку")
+                    copy_img_action = menu.addAction("Копировать картинку")
 
                 if ext == ".py":
-                    run_action = menu.addAction("▶️ Запустить скрипт")
-                    edit_action = menu.addAction("📝 Редактировать код")
+                    run_action = menu.addAction("Запустить скрипт")
+                    edit_action = menu.addAction("Редактировать код")
 
                 if ext == ".zip":
-                    extract_action = menu.addAction("📦 Распаковать здесь")
+                    extract_action = menu.addAction("Распаковать здесь")
 
-            copy_action = menu.addAction("📋 Копировать (Ctrl+C)")
-            cut_action = menu.addAction("✂️ Вырезать (Ctrl+X)")
-            delete_action = menu.addAction(f"🗑️ Удалить ({len(selected_items)}) (Del)")
+            copy_action = menu.addAction("Копировать (Ctrl+C)")
+            cut_action = menu.addAction("Вырезать (Ctrl+X)")
+            delete_action = menu.addAction(f"Удалить ({len(selected_items)}) (Del)")
 
             menu.addSeparator()
             if len(selected_items) == 1:
-                prop_action = menu.addAction("ℹ️ Свойства")
+                prop_action = menu.addAction("Свойства")
 
             action = menu.exec(self.file_list.mapToGlobal(position))
 
@@ -724,9 +711,9 @@ class FileManager(QMainWindow):
                 self.show_properties_dialog(selected_items[0].data(Qt.UserRole))
 
         else:
-            create_folder_action = menu.addAction("📁 Создать папку (Ctrl+N)")
-            create_file_action = menu.addAction("📄 Создать файл (Ctrl+Shift+N)")
-            paste_action = menu.addAction("📥 Вставить (Ctrl+V)")
+            create_folder_action = menu.addAction("Создать папку (Ctrl+N)")
+            create_file_action = menu.addAction("Создать файл (Ctrl+Shift+N)")
+            paste_action = menu.addAction("Вставить (Ctrl+V)")
 
             clipboard = QApplication.clipboard()
             paste_action.setEnabled(len(self.clipboard_paths) > 0 or clipboard.mimeData().hasImage())
